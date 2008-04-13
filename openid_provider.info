@@ -1,0 +1,5 @@
+; $Id$
+name = "Openid Provider"
+description = "OpenID Provider (or server) support allows you to login to other OpenID enabled sites using your local account."
+core = 6.x
+dependencies[] = openid

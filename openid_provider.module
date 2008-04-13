@@ -1,0 +1,244 @@
+<?php
+// $Id$
+
+/**
+ * OpenID 2.0 Provider implementation for Drupal.
+ */
+
+/**
+ * Implementation of hook_perm().
+ */
+function openid_provider_perm() {
+  return array('administer openid');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function openid_provider_menu() {
+  $items['admin/settings/openid_provider'] = array(
+    'title' => 'OpenID Provider',
+    'description' => 'Configre settings for the OpenID Provider.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('openid_provider_admin_settings'),
+    'access arguments' => array('administer openid'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  
+  $items['openid/provider'] = array(
+    'title' => 'OpenID Login',
+    'page callback' => 'openid_provider_endpoint',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'file' => 'openid_provider.pages.inc'
+  );
+  
+  $items['openid/provider/send'] = array(
+    'title' => 'OpenID Login',
+    'page callback' => 'openid_provider_send',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'file' => 'openid_provider.pages.inc'
+  );
+
+  $items['openid/provider/continue'] = array(
+    'title' => 'OpenID Login',
+    'page callback' => 'openid_provider_continue',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'file' => 'openid_provider.pages.inc'
+  );
+  
+
+  $items['openid/xrds'] = array(
+    'page callback' => 'openid_provider_xrds',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+
+  $items['user/%user/xrds'] = array(
+    'page callback' => 'openid_provider_xrds',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+  
+  $items['user/%user/openid_sites'] = array(
+    'title' => 'OpenID Sites',
+    'page callback' => 'openid_provider_sites',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'openid_provider.pages.inc'
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_init()
+ *
+ * Add appropriate HTML headers for XRDS and Link discovery.
+ */
+function openid_provider_init() {
+  // Not all OpenID clients may be smart enough to do XRDS.
+  drupal_add_link(array('rel' => 'openid2.provider', 'href' => url('openid/provider', array('absolute' => TRUE))));
+  drupal_add_link(array('rel' => 'openid.server', 'href' => url('openid/provider', array('absolute' => TRUE))));
+
+  if (arg(0) == 'user' && is_numeric(arg(1))) {
+    drupal_set_header('X-XRDS-Location: '. url('user/' . arg(1) . '/xrds', array('absolute' => TRUE)));
+    drupal_set_html_head('<meta http-equiv="X-XRDS-Location" content="' . url('user/' . arg(1) . '/xrds', array('absolute' => TRUE)) . '" />');
+  }
+  else {
+    drupal_set_header('X-XRDS-Location: '. url('openid/xrds', array('absolute' => TRUE)));
+    drupal_set_html_head('<meta http-equiv="X-XRDS-Location" content="' . url('openid/xrds', array('absolute' => TRUE)) . '" />');
+  }  
+}
+
+/**
+ * Implementation of hook_user.
+ */
+function openid_provider_user($op, &$edit, &$account, $category = NULL) {
+  global $user;
+  
+  switch ($op) {
+    case 'view':
+      if ($user->uid == $account->uid) {
+        $account->content['openid'] = array(
+          '#title' => t('OpenID'),
+          '#value' => t('You may login to other OpenID enabled sites using %url', array('%url' => url('user/' . $account->uid, array('absolute' => TRUE)))),
+          '#class' => 'openid',
+          '#weight' => 10
+        );
+      }
+      break;
+  }
+}
+
+/**
+ * Settings form.
+ */
+function openid_provider_admin_settings() {
+  $form = array();
+  $form['openid_provider_assoc_expires_in'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Associations expire in this many seconds'),
+    '#default_value' => variable_get('openid_provider_assoc_expires_in', '3600'),
+    '#size' => 10,
+    '#maxlength' => 10);
+  return system_settings_form($form);
+}
+
+/**
+ * Return a XRDS for this server to discover it based on the root url
+ */
+function openid_provider_xrds($account = NULL) {
+  module_load_include('inc', 'openid');
+  
+  if ($account) {
+    $types = array(OPENID_NS_2_0 .'/signon');
+  }
+  else {
+    $types = array(OPENID_NS_2_0 .'/server');
+  }
+  $types = array_merge($types, module_invoke_all('openid', 'xrds'));
+  
+  $xrds = '<?xml version="1.0"?>';
+  $xrds .= '<xrds:XRDS xmlns:xrds="xri://$xrds" xmlns="xri://$xrd*($v*2.0)">';
+  $xrds .= '<XRD>';
+  $xrds .= '<Service>';
+  foreach ($types as $type) {
+    $xrds .= '<Type>'. $type .'</Type>';
+  }
+  $xrds .= '<URI>' . url('openid/provider', array('absolute'=> TRUE)) . '</URI>';
+  if ($account->uid) {
+      $xrds .= '<LocalID>' . url('user/'. $account->uid, array('absolute' => TRUE)) . '</LocalID>';
+  }
+  $xrds .= '</Service>';
+  $xrds .= '</XRD>';
+  $xrds .= '</xrds:XRDS>';
+  
+  header('Content-Type: application/xrds+xml');
+  print $xrds;
+}
+
+/**
+ * Main OpenID Provider form
+ */
+function openid_provider_form(&$form_state, &$response = array(), $realm = NULL) {
+  global $user;
+
+  // Use form_state to store the $response and $realm values 
+  if (count($response)) {
+    $form_state['storage']['response'] = $response;
+  }
+  else {
+    $response = $form_state['storage']['response'];
+  }
+  
+  if ($realm) {
+    $form_state['storage']['realm'] = $realm;
+  }
+  else {
+    $realm = $form_state['storage']['realm'];
+  }
+  
+  $form = array();
+  
+  $form['intro'] = array(
+    '#type' => 'markup',
+    '#value' => '<p>'. t('You are being logged into %site, would you like to continue?', array('%site' => $realm)) . '</p>'
+  );
+  
+  $form['#action'] = url('openid/provider/send');
+
+  $form['submit_once'] = array(
+    '#type' => 'submit',
+    '#value' => t('Yes; just this once'),
+  );
+  $form['submit_always'] = array(
+    '#type' => 'submit',
+    '#value' => t('Yes; always'),
+    '#submit' => array('openid_provider_form_submit_always')
+  );
+  $form['cancel'] = array(
+    '#type' => 'submit',
+    '#value' => t('Cancel'),
+    '#submit' => array('openid_provider_form_submit_cancel')
+  );
+
+  return $form;
+}
+
+/**
+ * Once submit handler
+ */
+function openid_provider_form_submit(&$form, $form_state, $auto_release = FALSE) {
+  global $user;
+
+  module_load_include('inc', 'openid');
+  module_load_include('inc', 'openid_provider');
+  
+  $response = _openid_provider_sign($form_state['storage']['response']);
+  _openid_provider_rp_save($user->uid, $form_state['storage']['realm'], $auto_release);
+  openid_redirect_http($response['openid.return_to'], $response);
+}
+
+/**
+ * Always submit handler
+ */
+function openid_provider_form_submit_always(&$form, $form_state) {
+  return openid_provider_form_submit($form, $form_state, TRUE);
+}
+ 
+/**
+ * Cancel submit handler
+ */
+function openid_provider_form_submit_cancel(&$form, $form_state) {
+  module_load_include('inc', 'openid_provider');
+  module_load_include('inc', 'openid');
+  
+  $return_to = $form_state['values']['openid.return_to'];
+  $response = openid_provider_cancel_authentication_response($form_state['openid.mode']);
+  openid_redirect($return_to, $response);
+}
