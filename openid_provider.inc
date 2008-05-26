@@ -28,36 +28,36 @@ function openid_provider_association_response($request) {
     'assoc_type' => $assoc_type,
     'expires_in' => $expires_in
   );
-
-  $secret = _openid_get_bytes(20);
-  if ($session_type == '' || $session_type == 'no-encryption') {
-    if ($assoc_type == 'HMAC-SHA1') {
-      $mac_key = _openid_hmac($secret, $response['assoc_handle']);
-      $response['mac_key'] = $mac_key;
-    }
-    elseif ($assoc_type == 'HMAC-SHA256') {
-      // TODO: Not yet supported
-    }
+  
+  if ($session_type == 'DH-SHA1'
+        || (($session_type == '' || $session_type == 'no-encryption')
+            && $assoc_type == 'HMAC-SHA1')) {
+    $num_bytes = 20;
+    $algo = 'sha1';
   }
-  elseif ($session_type == 'DH-SHA1' || $session_type == 'DH-SHA256') {
-    $dh_assoc = openid_provider_dh_assoc($request, $secret);
+  elseif ($session_type == 'DH-SHA256'
+        || (($session_type == '' || $session_type == 'no-encryption')
+            && $assoc_type == 'HMAC-SHA256')) {
+    $num_bytes = 32;
+    $algo = 'sha256';
+  }
+  $secret = _openid_get_bytes($num_bytes);
+  if ($session_type == '' || $session_type == 'no-encryption') {
+    $mac_key = hash_hmac($algo, $response['assoc_handle'], $secret, true);
+    $response['mac_key'] = $mac_key;
+  }
+  else {
+    $dh_assoc = openid_provider_dh_assoc($request, $secret, $algo);
     $mac_key = base64_encode($secret);
     $response['dh_server_public'] = $dh_assoc['dh_server_public'];
     $response['enc_mac_key'] = $dh_assoc['enc_mac_key'];
   }
-
   // Save the association for reference when dealing
   // with future requests from the same RP.
   db_query("INSERT INTO {openid_provider_association} (assoc_handle, assoc_type, session_type, mac_key, created, expires_in) VALUES ('%s', '%s', '%s', '%s', %d, %d)",
            $assoc_handle, $assoc_type, $session_type, $mac_key, time(), $expires_in);
 
-  
-  if ($assoc_type == 'HMAC-SHA256' || $session_type == 'DH-SHA256') {
-    $message = _openid_create_message(openid_provider_association_error());
-  }
-  else {
-    $message = _openid_create_message($response);
-  }
+  $message = _openid_create_message($response);
 
   drupal_set_header('HTTP/1.1 200 OK');
   drupal_set_header("Content-Type: text/plain");
@@ -160,7 +160,7 @@ function openid_provider_authentication_error($mode) {
 
 
 
-function openid_provider_dh_assoc($request, $secret) {
+function openid_provider_dh_assoc($request, $secret, $algo = 'sha1') {
   if (empty($request['openid.dh_consumer_public'])) {
     return FALSE;
   }
@@ -185,13 +185,32 @@ function openid_provider_dh_assoc($request, $secret) {
   
   $cpub = _openid_dh_base64_to_long($request['openid.dh_consumer_public']);
   $shared = bcpowmod($cpub, $private, $mod);
-  $mac_key = _openid_dh_xorsecret($shared, $secret);
+  $mac_key = _openid_provider_dh_xorsecret($shared, $secret, $algo);
   $enc_mac_key = base64_encode($mac_key);
   $spub64 = _openid_dh_long_to_base64($public);
   return array(
     'dh_server_public' => $spub64,
     'enc_mac_key' => $enc_mac_key
     );
+}
+
+/**
+ * Is copy of _opend_dh_xorsecret() but uses PHP5 hash() function. Should be merged back into openid client
+ * for D7.
+ *
+ * @param long $shared
+ * @param string $secret
+ * @param string $algo
+ * @return binary string
+ */
+function _openid_provider_dh_xorsecret($shared, $secret, $algo = 'sha1') {
+  $dh_shared_str = _openid_dh_long_to_binary($shared);
+  $sha1_dh_shared = hash($algo, $dh_shared_str, true);
+  $xsecret = "";
+  for ($i = 0; $i < strlen($secret); $i++) {
+    $xsecret .= chr(ord($secret[$i]) ^ ord($sha1_dh_shared[$i]));
+  }
+  return $xsecret;
 }
 
 // 9.2.2.2. Verifying Directly with the Identity Provider
@@ -203,15 +222,11 @@ function openid_provider_verification_response($request) {
   // Use the request openid.assoc_handle to look up
   // how this message should be signed, based on
   // a previously-created association.
-  $assoc_type = 'HMAC-SHA1';
   $assoc = db_fetch_object(db_query("SELECT * FROM {openid_provider_association} WHERE assoc_handle = '%s'", 
     $request['openid.assoc_handle']));
-  if ($assoc && $assoc->assoc_type != '') {
-    $assoc_type = $assoc->assoc_type;
-  }
 
   $signed_keys = explode(',', $request['openid.signed']);
-  $signature = _openid_signature($assoc, $request, $signed_keys);
+  $signature = _openid_provider_signature($assoc, $request, $signed_keys);
 
   if ($signature != $request['openid.sig']) {
     $is_valid = FALSE;
@@ -305,6 +320,28 @@ function _openid_provider_sign($response) {
                                     $response['openid.assoc_handle']));
   
   // Generate signature for this message
-  $response['openid.sig'] = _openid_signature($assoc, $response, $signed_keys);
+  $response['openid.sig'] = _openid_provider_signature($assoc, $response, $signed_keys);
   return $response;
+}
+
+/**
+ * Is copy from openid client but uses PHP5 only hash_hmac() function.
+ *
+ * @param object $association
+ * @param array $message_array
+ * @param array $keys_to_sign
+ * @return string
+ */
+function _openid_provider_signature($association, $message_array, $keys_to_sign) {
+  $signature = '';
+  $sign_data = array();
+  foreach ($keys_to_sign as $key) {
+    if (isset($message_array['openid.'. $key])) {
+      $sign_data[$key] = $message_array['openid.'. $key];
+    }
+  }
+  $message = _openid_create_message($sign_data);
+  $secret = base64_decode($association->mac_key);
+  $signature = hash_hmac($association->assoc_type == 'HMAC-SHA256' ? 'sha256' : 'sha1', $message, $secret, true);
+  return base64_encode($signature);
 }
