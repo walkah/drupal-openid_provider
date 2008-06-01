@@ -2,6 +2,32 @@
 // $Id$
 
 /**
+ * Implementation of hook_requirements().
+ */
+function openid_provider_requirements($phase) {
+ $requirements = array();
+  // Ensure translations don't break at install time
+  $t = get_t();
+
+  if ($phase == 'runtime') {
+    if (user_access('access user profiles', drupal_anonymous_user())) {
+      $requirements['openid_provider'] = array(
+        'value' => $t('Enabled')
+      );
+    }
+    else {
+      $requirements['openid_provider'] = array(
+        'value' => $t('Disabled'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => $t('Openid Provider requires that anonymous users have <a href="@url">access user profile permission</a> to work properly.', array('@url' => url('admin/user/permissions/'. DRUPAL_ANONYMOUS_RID))),
+      );      
+    }
+    $requirements['openid_provider']['title'] = $t('Anon user profile access');
+  }
+  return $requirements;
+}
+
+/**
  * Implementation of hook_install().
  */
 function openid_provider_install() {
