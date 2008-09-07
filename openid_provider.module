@@ -18,7 +18,7 @@ function openid_provider_perm() {
 function openid_provider_menu() {
   $items['admin/settings/openid_provider'] = array(
     'title' => 'OpenID Provider',
-    'description' => 'Configre settings for the OpenID Provider.',
+    'description' => 'Configure settings for the OpenID Provider.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('openid_provider_admin_settings'),
     'access arguments' => array('administer openid'),
@@ -53,7 +53,8 @@ function openid_provider_menu() {
     'title' => 'OpenID Sites',
     'page callback' => 'openid_provider_sites',
     'page arguments' => array(1),
-    'access callback' => TRUE,
+    'access callback' => 'openid_provider_sites_access',
+    'access arguments' => array(1),
     'type' => MENU_LOCAL_TASK,
     'file' => 'openid_provider.pages.inc'
   );
@@ -70,6 +71,12 @@ function openid_provider_init() {
   // Not all OpenID clients may be smart enough to do XRDS.
   drupal_add_link(array('rel' => 'openid2.provider', 'href' => url('openid/provider', array('absolute' => TRUE))));
   drupal_add_link(array('rel' => 'openid.server', 'href' => url('openid/provider', array('absolute' => TRUE))));
+}
+
+function openid_provider_sites_access($account) {
+  global $user;
+
+  return ($account->uid == $user->uid) || user_access('administer openid');
 }
 
 /**
