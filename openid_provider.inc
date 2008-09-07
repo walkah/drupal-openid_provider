@@ -180,13 +180,13 @@ function openid_provider_dh_assoc($request, $secret, $algo = 'sha1') {
   }
 
   $r = _openid_dh_rand($mod);
-  $private = bcadd($r, 1);
-  $public = bcpowmod($gen, $private, $mod);
+  $private = _openid_provider_add($r, 1);
+  $public = _openid_provider_powmod($gen, $private, $mod);
   
   $cpub = _openid_dh_base64_to_long($request['openid.dh_consumer_public']);
-  $shared = bcpowmod($cpub, $private, $mod);
+  $shared = _openid_provider_powmod($cpub, $private, $mod);
   $mac_key = _openid_provider_dh_xorsecret($shared, $secret, $algo);
-  $enc_mac_key = base64_encode($mac_key);
+  $enc_mac_key = base64_encode($mac_key);  
   $spub64 = _openid_dh_long_to_base64($public);
   return array(
     'dh_server_public' => $spub64,
@@ -310,7 +310,6 @@ function _openid_provider_sign($response) {
 
   $signed_keys = array('op_endpoint', 'return_to', 'response_nonce', 'assoc_handle', 'identity', 'claimed_id');
   $signed_keys = array_merge($signed_keys, module_invoke_all('openid', 'signed', $response));
-//  $signed_keys = array_merge($signed_keys, $also_sign);
   $response['openid.signed'] = implode(',', $signed_keys);
   
   // Use the request openid.assoc_handle to look up
@@ -344,4 +343,22 @@ function _openid_provider_signature($association, $message_array, $keys_to_sign)
   $secret = base64_decode($association->mac_key);
   $signature = hash_hmac($association->assoc_type == 'HMAC-SHA256' ? 'sha256' : 'sha1', $message, $secret, true);
   return base64_encode($signature);
+}
+
+function _openid_provider_add($a, $b) {
+  if (function_exists('gmp_add')) {
+    return gmp_add($a, $b);
+  }
+  else if (function_exists('bcadd')) {
+    bcadd($a, $b);
+  }
+}
+
+function _openid_provider_powmod($base, $exp, $mod) {
+  if (function_exists('gmp_powm')) {
+    return gmp_powm($base, $exp, $mod);
+  }
+  else if (function_exists('bcpowmod')) {
+    return bcpowmod($base, $exp, $mod);
+  }
 }
