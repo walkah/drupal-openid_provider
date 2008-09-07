@@ -49,20 +49,6 @@ function openid_provider_menu() {
     'file' => 'openid_provider.pages.inc'
   );
   
-
-  $items['openid/xrds'] = array(
-    'page callback' => 'openid_provider_xrds',
-    'access callback' => TRUE,
-    'type' => MENU_CALLBACK
-  );
-
-  $items['user/%user/xrds'] = array(
-    'page callback' => 'openid_provider_xrds',
-    'page arguments' => array(1),
-    'access callback' => TRUE,
-    'type' => MENU_CALLBACK
-  );
-  
   $items['user/%user/openid_sites'] = array(
     'title' => 'OpenID Sites',
     'page callback' => 'openid_provider_sites',
@@ -84,15 +70,6 @@ function openid_provider_init() {
   // Not all OpenID clients may be smart enough to do XRDS.
   drupal_add_link(array('rel' => 'openid2.provider', 'href' => url('openid/provider', array('absolute' => TRUE))));
   drupal_add_link(array('rel' => 'openid.server', 'href' => url('openid/provider', array('absolute' => TRUE))));
-
-  if (arg(0) == 'user' && is_numeric(arg(1))) {
-    drupal_set_header('X-XRDS-Location: '. url('user/' . arg(1) . '/xrds', array('absolute' => TRUE)));
-    drupal_set_html_head('<meta http-equiv="X-XRDS-Location" content="' . url('user/' . arg(1) . '/xrds', array('absolute' => TRUE)) . '" />');
-  }
-  else {
-    drupal_set_header('X-XRDS-Location: '. url('openid/xrds', array('absolute' => TRUE)));
-    drupal_set_html_head('<meta http-equiv="X-XRDS-Location" content="' . url('openid/xrds', array('absolute' => TRUE)) . '" />');
-  }  
 }
 
 /**
@@ -141,25 +118,24 @@ function openid_provider_xrds($account = NULL) {
   else {
     $types = array(OPENID_NS_2_0 .'/server');
   }
-  $types = array_merge($types, module_invoke_all('openid', 'xrds'));
-  
-  $xrds = '<?xml version="1.0"?>';
-  $xrds .= '<xrds:XRDS xmlns:xrds="xri://$xrds" xmlns="xri://$xrd*($v*2.0)">';
-  $xrds .= '<XRD>';
-  $xrds .= '<Service>';
-  foreach ($types as $type) {
-    $xrds .= '<Type>'. $type .'</Type>';
-  }
-  $xrds .= '<URI>' . url('openid/provider', array('absolute'=> TRUE)) . '</URI>';
+
+  $data = array(
+    'Type' => $types,
+    'URI' => array(url('openid/provider', array('absolute'=> TRUE))),
+  );
   if ($account->uid) {
-      $xrds .= '<LocalID>' . url('user/'. $account->uid, array('absolute' => TRUE)) . '</LocalID>';
+    $data['LocalID'] = array(url('user/'. $account->uid, array('absolute' => TRUE)));
   }
-  $xrds .= '</Service>';
-  $xrds .= '</XRD>';
-  $xrds .= '</xrds:XRDS>';
   
-  header('Content-Type: application/xrds+xml');
-  print $xrds;
+  $xrds['openid_provider'] = array(
+    'services' => array(
+      array('priority' => 10,
+            'data' => $data
+      )
+    )
+  );
+
+  return $xrds;
 }
 
 /**
