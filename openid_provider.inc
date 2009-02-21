@@ -148,7 +148,7 @@ function openid_provider_authentication_error($mode) {
   if ($mode == 'checkid_immediate') {
     return array(
       'openid.mode' => 'id_res',
-      'openid.user_setup_url' => url('user/login', NULL, NULL, TRUE)
+      'openid.user_setup_url' => url('user/login', array('absolute' => TRUE))
     );
   }
   else { // checkid_setup
@@ -253,7 +253,7 @@ function openid_provider_cancel_authentication_response($mode = 'checkid_immedia
     $response = array(
       'openid.ns' => OPENID_NS_2_0,
       'openid.mode' => 'id_res',
-      'openid.user_setup_url' => url('user', NULL, NULL, TRUE)
+      'openid.user_setup_url' => url('user/login', array('absolute' => TRUE))
     );
   }
   else {
