@@ -350,7 +350,7 @@ function _openid_provider_add($a, $b) {
     return gmp_add($a, $b);
   }
   else if (function_exists('bcadd')) {
-    bcadd($a, $b);
+    return bcadd($a, $b);
   }
 }
 
