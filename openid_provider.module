@@ -221,7 +221,7 @@ function openid_provider_form_submit_cancel(&$form, $form_state) {
   module_load_include('inc', 'openid_provider');
   module_load_include('inc', 'openid');
   
-  $return_to = $form_state['values']['openid.return_to'];
+  $return_to = $form_state['storage']['response']['openid.return_to'];  
   $response = openid_provider_cancel_authentication_response($form_state['openid.mode']);
   openid_redirect($return_to, $response);
 }
