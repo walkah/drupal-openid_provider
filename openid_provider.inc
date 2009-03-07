@@ -43,7 +43,7 @@ function openid_provider_association_response($request) {
   }
   $secret = _openid_get_bytes($num_bytes);
   if ($session_type == '' || $session_type == 'no-encryption') {
-    $mac_key = hash_hmac($algo, $response['assoc_handle'], $secret, true);
+    $mac_key = base64_encode(hash_hmac($algo, $response['assoc_handle'], $secret, true));
     $response['mac_key'] = $mac_key;
   }
   else {
