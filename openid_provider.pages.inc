@@ -68,14 +68,16 @@ function openid_provider_send() {
  * @param object $account User account object for the user.
  */
 function openid_provider_sites($account) {
-  return drupal_get_form('openid_provider_sites_form');
+  return drupal_get_form('openid_provider_sites_form', $account);
 }
 
 /**
  * Form builder function for openid_provider_sites
  */
-function openid_provider_sites_form() {
-  global $user;
+function openid_provider_sites_form($form_state, $user = NULL) {
+  if (!$user) {
+    global $user;
+  }
   
   module_load_include('inc', 'openid_provider');
   
