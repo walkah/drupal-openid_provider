@@ -105,7 +105,7 @@ function openid_provider_sites_form() {
 /**
  * Form submit callback for openid_provider_sites.
  */
-function openid_provider_sites_form_submit(&$form, &$form_state) {
+function openid_provider_sites_form_submit($form, &$form_state) {
   foreach ($form_state['values']['rpid'] as $key => $value) {
     db_query("UPDATE {openid_provider_relying_party} SET auto_release=%d WHERE rpid=%d", $value, $key);
   }
