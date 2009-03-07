@@ -129,6 +129,9 @@ function openid_provider_authentication_response($request) {
       $response[$key] = $val;
     }
   }
+
+  // calling hook_openid so we can do response parsing and send any pertinent data back to the user
+  $response = array_merge($response, module_invoke_all('openid_provider', 'response', $response, $request));
   
   $rp = _openid_provider_rp_load($user->uid, $realm);
   if ($rp->auto_release) {
@@ -309,7 +312,7 @@ function _openid_provider_sign($response) {
   }
 
   $signed_keys = array('op_endpoint', 'return_to', 'response_nonce', 'assoc_handle', 'identity', 'claimed_id');
-  $signed_keys = array_merge($signed_keys, module_invoke_all('openid', 'signed', $response));
+  $signed_keys = array_merge($signed_keys, module_invoke_all('openid_provider', 'signed', $response));
   $response['openid.signed'] = implode(',', $signed_keys);
   
   // Use the request openid.assoc_handle to look up
