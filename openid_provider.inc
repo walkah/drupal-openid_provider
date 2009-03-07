@@ -113,7 +113,9 @@ function openid_provider_authentication_response($request) {
     'openid.claimed_id' => $identity,
     'openid.return_to' => $request['openid.return_to'],
     'openid.response_nonce' => _openid_provider_nonce(),
-    'openid.assoc_handle' => $request['openid.assoc_handle']
+    'openid.assoc_handle' => $request['openid.assoc_handle'],
+    'openid.sreg.nickname' => $user->name,
+    'openid.sreg.email' => $user->mail
   );
 
   // Is the RP requesting Immediate or Indirect mode?
