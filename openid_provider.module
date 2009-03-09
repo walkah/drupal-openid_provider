@@ -2,15 +2,9 @@
 // $Id$
 
 /**
+ * @file
  * OpenID 2.0 Provider implementation for Drupal.
  */
-
-/**
- * Implementation of hook_perm().
- */
-function openid_provider_perm() {
-  return array('administer openid');
-}
 
 /**
  * Implementation of hook_menu().
@@ -21,12 +15,12 @@ function openid_provider_menu() {
     'description' => 'Configure settings for the OpenID Provider.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('openid_provider_admin_settings'),
-    'access arguments' => array('administer openid'),
+    'access arguments' => array('administer openid provider'),
     'type' => MENU_NORMAL_ITEM,
   );
   
   $items['openid/provider'] = array(
-    'title' => 'OpenID Login',
+    'title' => 'OpenID login',
     'page callback' => 'openid_provider_endpoint',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
@@ -34,7 +28,7 @@ function openid_provider_menu() {
   );
   
   $items['openid/provider/send'] = array(
-    'title' => 'OpenID Login',
+    'title' => 'OpenID login',
     'page callback' => 'openid_provider_send',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
@@ -42,7 +36,7 @@ function openid_provider_menu() {
   );
 
   $items['openid/provider/continue'] = array(
-    'title' => 'OpenID Login',
+    'title' => 'OpenID login',
     'page callback' => 'openid_provider_continue',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
@@ -50,7 +44,7 @@ function openid_provider_menu() {
   );
   
   $items['user/%user/openid_sites'] = array(
-    'title' => 'OpenID Sites',
+    'title' => 'OpenID sites',
     'page callback' => 'openid_provider_sites',
     'page arguments' => array(1),
     'access callback' => 'openid_provider_sites_access',
@@ -60,6 +54,13 @@ function openid_provider_menu() {
   );
 
   return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function openid_provider_perm() {
+  return array('administer openid provider');
 }
 
 /**
@@ -73,14 +74,16 @@ function openid_provider_init() {
   drupal_add_link(array('rel' => 'openid.server', 'href' => url('openid/provider', array('absolute' => TRUE))));
 }
 
+/**
+ * Menu access callback. Only allow access to current user and administrators.
+ */
 function openid_provider_sites_access($account) {
   global $user;
-
-  return ($account->uid == $user->uid) || user_access('administer openid');
+  return ($account->uid == $user->uid) || user_access('administer openid provider');
 }
 
 /**
- * Implementation of hook_user.
+ * Implementation of hook_user().
  */
 function openid_provider_user($op, &$edit, &$account, $category = NULL) {
   global $user;
@@ -89,8 +92,9 @@ function openid_provider_user($op, &$edit, &$account, $category = NULL) {
     case 'view':
       if ($user->uid == $account->uid) {
         $account->content['openid'] = array(
+          '#type' => 'user_profile_category',
           '#title' => t('OpenID'),
-          '#value' => t('You may login to other OpenID enabled sites using %url', array('%url' => url('user/' . $account->uid, array('absolute' => TRUE)))),
+          '#value' => t('You may login to other OpenID enabled sites using %url', array('%url' => url('user/'. $account->uid, array('absolute' => TRUE)))),
           '#class' => 'openid',
           '#weight' => 10
         );
@@ -109,7 +113,8 @@ function openid_provider_admin_settings() {
     '#title' => t('Associations expire in this many seconds'),
     '#default_value' => variable_get('openid_provider_assoc_expires_in', '3600'),
     '#size' => 10,
-    '#maxlength' => 10);
+    '#maxlength' => 10
+  );
   return system_settings_form($form);
 }
 
