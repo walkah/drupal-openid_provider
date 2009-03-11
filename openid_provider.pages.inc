@@ -35,6 +35,14 @@ function openid_provider_endpoint($request = array()) {
 }
 
 /**
+ * Callback page for OpenID Identifier. This page is primarily used for
+ * discovery when someone is logging in from a Relying Party.
+ */
+function openid_provider_page($account) {
+  return t('This is the OpenID page for %user.', array('%user' => $account->name));
+}
+
+/**
  * Menu callback to continue authentication process after user login. This
  * callback is encountered when a user tries to login to an RP but does not yet
  * have a valid local session
