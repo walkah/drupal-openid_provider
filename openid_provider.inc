@@ -43,7 +43,7 @@ function openid_provider_association_response($request) {
   }
   $secret = _openid_get_bytes($num_bytes);
   if ($session_type == '' || $session_type == 'no-encryption') {
-    $mac_key = hash_hmac($algo, $response['assoc_handle'], $secret, true);
+    $mac_key = base64_encode(hash_hmac($algo, $response['assoc_handle'], $secret, true));
     $response['mac_key'] = $mac_key;
   }
   else {
@@ -95,11 +95,11 @@ function openid_provider_authentication_response($request) {
 
   // Check for a directed identity request.
   if ($request['openid.identity'] == 'http://specs.openid.net/auth/2.0/identifier_select') {
-    $identity = url('user/' . $user->uid, array('absolute' => TRUE));
+    $identity = url(openid_provider_user_url($user->uid), array('absolute' => TRUE));
   }
   else {
     $identity = $request['openid.identity'];
-    if ($identity != url('user/'. $user->uid, array('absolute' => TRUE))) {
+    if ($identity != url(openid_provider_user_url($user->uid), array('absolute' => TRUE))) {
       $response = openid_provider_authentication_error($request['openid.mode']);
       openid_redirect($request['openid.return_to'], $response);
     }
@@ -113,7 +113,9 @@ function openid_provider_authentication_response($request) {
     'openid.claimed_id' => $identity,
     'openid.return_to' => $request['openid.return_to'],
     'openid.response_nonce' => _openid_provider_nonce(),
-    'openid.assoc_handle' => $request['openid.assoc_handle']
+    'openid.assoc_handle' => $request['openid.assoc_handle'],
+    'openid.sreg.nickname' => $user->name,
+    'openid.sreg.email' => $user->mail
   );
 
   // Is the RP requesting Immediate or Indirect mode?
@@ -129,6 +131,9 @@ function openid_provider_authentication_response($request) {
       $response[$key] = $val;
     }
   }
+
+  // calling hook_openid so we can do response parsing and send any pertinent data back to the user
+  $response = array_merge($response, module_invoke_all('openid_provider', 'response', $response, $request));
   
   $rp = _openid_provider_rp_load($user->uid, $realm);
   if ($rp->auto_release) {
@@ -148,7 +153,7 @@ function openid_provider_authentication_error($mode) {
   if ($mode == 'checkid_immediate') {
     return array(
       'openid.mode' => 'id_res',
-      'openid.user_setup_url' => url('user/login', NULL, NULL, TRUE)
+      'openid.user_setup_url' => url('user/login', array('absolute' => TRUE))
     );
   }
   else { // checkid_setup
@@ -253,7 +258,7 @@ function openid_provider_cancel_authentication_response($mode = 'checkid_immedia
     $response = array(
       'openid.ns' => OPENID_NS_2_0,
       'openid.mode' => 'id_res',
-      'openid.user_setup_url' => url('user', NULL, NULL, TRUE)
+      'openid.user_setup_url' => url('user/login', array('absolute' => TRUE))
     );
   }
   else {
@@ -309,7 +314,7 @@ function _openid_provider_sign($response) {
   }
 
   $signed_keys = array('op_endpoint', 'return_to', 'response_nonce', 'assoc_handle', 'identity', 'claimed_id');
-  $signed_keys = array_merge($signed_keys, module_invoke_all('openid', 'signed', $response));
+  $signed_keys = array_merge($signed_keys, module_invoke_all('openid_provider', 'signed', $response));
   $response['openid.signed'] = implode(',', $signed_keys);
   
   // Use the request openid.assoc_handle to look up
@@ -350,7 +355,7 @@ function _openid_provider_add($a, $b) {
     return gmp_add($a, $b);
   }
   else if (function_exists('bcadd')) {
-    bcadd($a, $b);
+    return bcadd($a, $b);
   }
 }
 

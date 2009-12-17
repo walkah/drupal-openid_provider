@@ -35,6 +35,14 @@ function openid_provider_endpoint($request = array()) {
 }
 
 /**
+ * Callback page for OpenID Identifier. This page is primarily used for
+ * discovery when someone is logging in from a Relying Party.
+ */
+function openid_provider_page($account) {
+  return t('This is the OpenID page for %user.', array('%user' => $account->name));
+}
+
+/**
  * Menu callback to continue authentication process after user login. This
  * callback is encountered when a user tries to login to an RP but does not yet
  * have a valid local session
@@ -68,14 +76,16 @@ function openid_provider_send() {
  * @param object $account User account object for the user.
  */
 function openid_provider_sites($account) {
-  return drupal_get_form('openid_provider_sites_form');
+  return drupal_get_form('openid_provider_sites_form', $account);
 }
 
 /**
  * Form builder function for openid_provider_sites
  */
-function openid_provider_sites_form() {
-  global $user;
+function openid_provider_sites_form($form_state, $user = NULL) {
+  if (!$user) {
+    global $user;
+  }
   
   module_load_include('inc', 'openid_provider');
   
@@ -105,7 +115,7 @@ function openid_provider_sites_form() {
 /**
  * Form submit callback for openid_provider_sites.
  */
-function openid_provider_sites_form_submit(&$form, &$form_state) {
+function openid_provider_sites_form_submit($form, &$form_state) {
   foreach ($form_state['values']['rpid'] as $key => $value) {
     db_query("UPDATE {openid_provider_relying_party} SET auto_release=%d WHERE rpid=%d", $value, $key);
   }
