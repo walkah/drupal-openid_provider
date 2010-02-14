@@ -157,7 +157,8 @@ function openid_provider_admin_settings() {
     '#title' => t('Associations expire in this many seconds'),
     '#default_value' => variable_get('openid_provider_assoc_expires_in', '3600'),
     '#size' => 10,
-    '#maxlength' => 10
+    '#maxlength' => 10,
+    '#description' => t('This timeout is necessary to ensure proper security of your identities. If an attacker sniffing the network gets a hold of the SHA1 hash and is somehow able to bruteforce it, he can perform a man in the middle attack and access the target site. Since brute force attacks take a long time, this timeout ensures this attack is impracticable. !readmore', array('!readmore' => l(t('More information about this issue.'), 'http://openid.net/pipermail/security/2007-February/000237.html'))),
   );
   return system_settings_form($form);
 }
