@@ -197,7 +197,7 @@ function openid_provider_xrds($account = NULL) {
 /**
  * Main OpenID Provider form
  */
-function openid_provider_form(&$form_state, &$response = array(), $realm = NULL) {
+function openid_provider_form(&$form_state, $response = array(), $realm = NULL) {
   global $user;
 
   // Use form_state to store the $response and $realm values 
