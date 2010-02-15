@@ -163,7 +163,22 @@ function openid_provider_authentication_error($mode) {
   }
 }
 
-
+/**
+ * Sends an unsolicited positive assertion to the relying party.
+ *
+ * @param $response
+ *   Response data
+ * @param $url
+ *   The URL where the assertion should be sent
+ */
+function openid_provider_unsolicited_assertion($response, $url) {
+  $response = _openid_provider_sign($response);
+  $result = drupal_http_request($url, array(), 'GET', $response);
+  if ($result->code == 404) {
+    return FALSE;
+  }
+  return TRUE;
+}
 
 function openid_provider_dh_assoc($request, $secret, $algo = 'sha1') {
   if (empty($request['openid.dh_consumer_public'])) {
