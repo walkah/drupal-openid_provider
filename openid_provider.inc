@@ -43,7 +43,7 @@ function openid_provider_association_response($request) {
   }
   $secret = _openid_get_bytes($num_bytes);
   if ($session_type == '' || $session_type == 'no-encryption') {
-    $mac_key = base64_encode(hash_hmac($algo, $response['assoc_handle'], $secret, true));
+    $mac_key = base64_encode(hash_hmac($algo, $response['assoc_handle'], $secret, TRUE));
     $response['mac_key'] = $mac_key;
   }
   else {
@@ -163,7 +163,22 @@ function openid_provider_authentication_error($mode) {
   }
 }
 
-
+/**
+ * Sends an unsolicited positive assertion to the relying party.
+ *
+ * @param $response
+ *   Response data
+ * @param $url
+ *   The URL where the assertion should be sent
+ */
+function openid_provider_unsolicited_assertion($response, $url) {
+  $response = _openid_provider_sign($response);
+  $result = drupal_http_request($url, array(), 'GET', $response);
+  if ($result->code == 404) {
+    return FALSE;
+  }
+  return TRUE;
+}
 
 function openid_provider_dh_assoc($request, $secret, $algo = 'sha1') {
   if (empty($request['openid.dh_consumer_public'])) {
@@ -210,7 +225,7 @@ function openid_provider_dh_assoc($request, $secret, $algo = 'sha1') {
  */
 function _openid_provider_dh_xorsecret($shared, $secret, $algo = 'sha1') {
   $dh_shared_str = _openid_dh_long_to_binary($shared);
-  $sha1_dh_shared = hash($algo, $dh_shared_str, true);
+  $sha1_dh_shared = hash($algo, $dh_shared_str, TRUE);
   $xsecret = "";
   for ($i = 0; $i < strlen($secret); $i++) {
     $xsecret .= chr(ord($secret[$i]) ^ ord($sha1_dh_shared[$i]));
@@ -274,7 +289,7 @@ function _openid_provider_rp_load($uid, $realm = NULL) {
   else {
     $rps = array();
     $result = db_query("SELECT * FROM {openid_provider_relying_party} WHERE uid=%d ORDER BY last_time DESC", $uid);
-    while ($rp = db_fetch_object($result)){
+    while ($rp = db_fetch_object($result)) {
       $rps[] = $rp;
     }
     return $rps;
@@ -346,7 +361,7 @@ function _openid_provider_signature($association, $message_array, $keys_to_sign)
   }
   $message = _openid_create_message($sign_data);
   $secret = base64_decode($association->mac_key);
-  $signature = hash_hmac($association->assoc_type == 'HMAC-SHA256' ? 'sha256' : 'sha1', $message, $secret, true);
+  $signature = hash_hmac($association->assoc_type == 'HMAC-SHA256' ? 'sha256' : 'sha1', $message, $secret, TRUE);
   return base64_encode($signature);
 }
 

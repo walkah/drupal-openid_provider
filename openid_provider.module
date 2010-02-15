@@ -10,7 +10,7 @@
  * Implementation of hook_menu().
  */
 function openid_provider_menu() {
-  $items['admin/settings/openid_provider'] = array(
+  $items['admin/settings/openid-provider'] = array(
     'title' => 'OpenID Provider',
     'description' => 'Configure settings for the OpenID Provider.',
     'page callback' => 'drupal_get_form',
@@ -18,7 +18,6 @@ function openid_provider_menu() {
     'access arguments' => array('administer openid provider'),
     'type' => MENU_NORMAL_ITEM,
   );
-  
   $items['openid/provider'] = array(
     'title' => 'OpenID login',
     'page callback' => 'openid_provider_endpoint',
@@ -26,7 +25,6 @@ function openid_provider_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'openid_provider.pages.inc'
   );
-  
   $items['openid/provider/send'] = array(
     'title' => 'OpenID login',
     'page callback' => 'openid_provider_send',
@@ -34,7 +32,6 @@ function openid_provider_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'openid_provider.pages.inc'
   );
-
   $items['openid/provider/continue'] = array(
     'title' => 'OpenID login',
     'page callback' => 'openid_provider_continue',
@@ -42,7 +39,6 @@ function openid_provider_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'openid_provider.pages.inc'
   );
-  
   $items[openid_provider_user_url('%user')] = array(
     'title' => 'OpenID Page',
     'page callback' => 'openid_provider_page',
@@ -52,8 +48,7 @@ function openid_provider_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'openid_provider.pages.inc'
   );
-
-  $items['user/%user/openid_sites'] = array(
+  $items['user/%user/openid-sites'] = array(
     'title' => 'OpenID sites',
     'page callback' => 'openid_provider_sites',
     'page arguments' => array(1),
@@ -62,7 +57,6 @@ function openid_provider_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'openid_provider.pages.inc'
   );
-
   return $items;
 }
 
@@ -72,6 +66,18 @@ function openid_provider_menu() {
 function openid_provider_perm() {
   return array('administer openid provider');
 }
+
+ /**
+  * Implementation of hook_theme()
+  */
+function openid_provider_theme($existing, $type, $theme, $path) {
+  return array(
+    'openid_provider_sites' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
+}
+
 
 /**
  * Implementation of hook_init()
@@ -157,7 +163,8 @@ function openid_provider_admin_settings() {
     '#title' => t('Associations expire in this many seconds'),
     '#default_value' => variable_get('openid_provider_assoc_expires_in', '3600'),
     '#size' => 10,
-    '#maxlength' => 10
+    '#maxlength' => 10,
+    '#description' => t('This timeout is necessary to ensure proper security of your identities. If an attacker sniffing the network gets a hold of the SHA1 hash and is somehow able to bruteforce it, he can perform a man in the middle attack and access the target site. Since brute force attacks take a long time, this timeout ensures this attack is impracticable. !readmore', array('!readmore' => l(t('More information about this issue.'), 'http://openid.net/pipermail/security/2007-February/000237.html'))),
   );
   return system_settings_form($form);
 }
@@ -177,7 +184,7 @@ function openid_provider_xrds($account = NULL) {
 
   $data = array(
     'Type' => $types,
-    'URI' => array(url('openid/provider', array('absolute'=> TRUE))),
+    'URI' => array(url('openid/provider', array('absolute' => TRUE))),
   );
   if ($account->uid) {
     $data['LocalID'] = array(url(openid_provider_user_url($account->uid), array('absolute' => TRUE)));
@@ -197,7 +204,7 @@ function openid_provider_xrds($account = NULL) {
 /**
  * Main OpenID Provider form
  */
-function openid_provider_form(&$form_state, &$response = array(), $realm = NULL) {
+function openid_provider_form(&$form_state, $response = array(), $realm = NULL) {
   global $user;
 
   // Use form_state to store the $response and $realm values 
@@ -219,7 +226,7 @@ function openid_provider_form(&$form_state, &$response = array(), $realm = NULL)
   
   $form['intro'] = array(
     '#type' => 'markup',
-    '#value' => '<p>'. t('You are being logged into %site, would you like to continue?', array('%site' => $realm)) . '</p>'
+    '#value' => '<p>'. t('You are being logged into %site, would you like to continue?', array('%site' => $realm)) .'</p>'
   );
   
   $form['#action'] = url('openid/provider/send');
