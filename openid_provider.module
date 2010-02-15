@@ -10,7 +10,7 @@
  * Implementation of hook_menu().
  */
 function openid_provider_menu() {
-  $items['admin/settings/openid_provider'] = array(
+  $items['admin/settings/openid-provider'] = array(
     'title' => 'OpenID Provider',
     'description' => 'Configure settings for the OpenID Provider.',
     'page callback' => 'drupal_get_form',
@@ -18,7 +18,6 @@ function openid_provider_menu() {
     'access arguments' => array('administer openid provider'),
     'type' => MENU_NORMAL_ITEM,
   );
-  
   $items['openid/provider'] = array(
     'title' => 'OpenID login',
     'page callback' => 'openid_provider_endpoint',
@@ -26,7 +25,6 @@ function openid_provider_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'openid_provider.pages.inc'
   );
-  
   $items['openid/provider/send'] = array(
     'title' => 'OpenID login',
     'page callback' => 'openid_provider_send',
@@ -34,7 +32,6 @@ function openid_provider_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'openid_provider.pages.inc'
   );
-
   $items['openid/provider/continue'] = array(
     'title' => 'OpenID login',
     'page callback' => 'openid_provider_continue',
@@ -42,7 +39,6 @@ function openid_provider_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'openid_provider.pages.inc'
   );
-  
   $items[openid_provider_user_url('%user')] = array(
     'title' => 'OpenID Page',
     'page callback' => 'openid_provider_page',
@@ -52,8 +48,7 @@ function openid_provider_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'openid_provider.pages.inc'
   );
-
-  $items['user/%user/openid_sites'] = array(
+  $items['user/%user/openid-sites'] = array(
     'title' => 'OpenID sites',
     'page callback' => 'openid_provider_sites',
     'page arguments' => array(1),
@@ -62,7 +57,6 @@ function openid_provider_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'openid_provider.pages.inc'
   );
-
   return $items;
 }
 
