@@ -172,7 +172,7 @@ function openid_provider_xrds($account = NULL) {
 
   $data = array(
     'Type' => $types,
-    'URI' => array(url('openid/provider', array('absolute'=> TRUE))),
+    'URI' => array(url('openid/provider', array('absolute' => TRUE))),
   );
   if ($account->uid) {
     $data['LocalID'] = array(url(openid_provider_user_url($account->uid), array('absolute' => TRUE)));
@@ -214,7 +214,7 @@ function openid_provider_form(&$form_state, $response = array(), $realm = NULL) 
   
   $form['intro'] = array(
     '#type' => 'markup',
-    '#value' => '<p>'. t('You are being logged into %site, would you like to continue?', array('%site' => $realm)) . '</p>'
+    '#value' => '<p>'. t('You are being logged into %site, would you like to continue?', array('%site' => $realm)) .'</p>'
   );
   
   $form['#action'] = url('openid/provider/send');
