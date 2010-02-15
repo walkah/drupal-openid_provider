@@ -76,6 +76,7 @@ function openid_provider_send() {
  * @param object $account User account object for the user.
  */
 function openid_provider_sites($account) {
+  drupal_set_title(check_plain($account->name));
   return drupal_get_form('openid_provider_sites_form', $account);
 }
 
