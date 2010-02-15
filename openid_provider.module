@@ -67,6 +67,18 @@ function openid_provider_perm() {
   return array('administer openid provider');
 }
 
+ /**
+  * Implementation of hook_theme()
+  */
+function openid_provider_theme($existing, $type, $theme, $path) {
+  return array(
+    'openid_provider_sites' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
+}
+
+
 /**
  * Implementation of hook_init()
  *
