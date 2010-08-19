@@ -221,16 +221,18 @@ function openid_provider_form(&$form_state, $response = array(), $realm = NULL) 
   else {
     $realm = $form_state['storage']['realm'];
   }
-  
+
   $form = array();
-  
+
+  // Force FAPI to cache this form so that $form_state['storage'] is available
+  // in submit handler.
+  $form['#cache'] = TRUE;
+  $form['#action'] = url('openid/provider/send');
+
   $form['intro'] = array(
     '#type' => 'markup',
     '#value' => '<p>'. t('You are being logged into %site, would you like to continue?', array('%site' => $realm)) .'</p>'
   );
-  
-  $form['#action'] = url('openid/provider/send');
-
   $form['submit_once'] = array(
     '#type' => 'submit',
     '#value' => t('Yes; just this once'),
