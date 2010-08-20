@@ -39,7 +39,7 @@ function openid_provider_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'openid_provider.pages.inc'
   );
-  $items[openid_provider_user_url('%user')] = array(
+  $items[openid_provider_user_path('%user')] = array(
     'title' => 'OpenID Page',
     'page callback' => 'openid_provider_page',
     'page arguments' => array(1),
@@ -86,8 +86,8 @@ function openid_provider_theme($existing, $type, $theme, $path) {
  */
 function openid_provider_init() {
   // Not all OpenID clients may be smart enough to do XRDS.
-  drupal_add_link(array('rel' => 'openid2.provider', 'href' => url('openid/provider', array('absolute' => TRUE))));
-  drupal_add_link(array('rel' => 'openid.server', 'href' => url('openid/provider', array('absolute' => TRUE))));
+  drupal_add_link(array('rel' => 'openid2.provider', 'href' => openid_provider_url('openid/provider')));
+  drupal_add_link(array('rel' => 'openid.server', 'href' => openid_provider_url('openid/provider')));
 
 }
 
@@ -114,7 +114,7 @@ function openid_provider_user($op, &$edit, &$account, $category = NULL) {
         $pathauto_user = (object) array_merge((array) $account, $edit);
         if ($account->name) {
           $placeholders = pathauto_get_placeholders('user', $pathauto_user);
-          $src = openid_provider_user_url($account->uid);
+          $src = openid_provider_user_path($account->uid);
           $alias = pathauto_create_alias('openid_provider', $op, $placeholders, $src, $account->uid);
         }
       }
@@ -123,7 +123,7 @@ function openid_provider_user($op, &$edit, &$account, $category = NULL) {
       // If the user is deleted, remove the path aliases
       if (module_exists('pathauto')) {
         $account = (object) $account;
-       	path_set_alias(openid_provider_user_url($account->uid));
+       	path_set_alias(openid_provider_user_path($account->uid));
       }
       break;
     case 'view':
@@ -135,7 +135,7 @@ function openid_provider_user($op, &$edit, &$account, $category = NULL) {
         $account->content['openid']['identity'] = array(
           '#type' => 'user_profile_item',
           '#title' => t('Identity'),
-          '#value' => t('You may login to other OpenID enabled sites using %url', array('%url' => url(openid_provider_user_url($account->uid), array('absolute' => TRUE)))),
+          '#value' => t('You may login to other OpenID enabled sites using %url', array('%url' => openid_provider_url(openid_provider_user_path($account->uid)))),
           '#class' => 'openid',
         );
       }
@@ -144,9 +144,24 @@ function openid_provider_user($op, &$edit, &$account, $category = NULL) {
 }
 
 /**
- * Return the canonical OpenID URL for this user id
+ * Return the absolute url to the path, without any language modifications.
  */
-function openid_provider_user_url($uid) {
+function openid_provider_url($path) {
+  // Prevent any language modifications to the url by generating and using a
+  // fake language object.
+  $language = new stdClass();
+  $language->language = '';
+  $language->prefix = '';
+  return url($path, array(
+    'absolute' => TRUE,
+    'language' => $language,
+  ));
+}
+
+/**
+ * Return the local OpenID URL for this user id
+ */
+function openid_provider_user_path($uid) {
   if (is_object($uid)) {
     $uid = $uid->uid;
   }
@@ -184,10 +199,10 @@ function openid_provider_xrds($account = NULL) {
 
   $data = array(
     'Type' => $types,
-    'URI' => array(url('openid/provider', array('absolute' => TRUE))),
+    'URI' => array(openid_provider_url('openid/provider')),
   );
   if ($account->uid) {
-    $data['LocalID'] = array(url(openid_provider_user_url($account->uid), array('absolute' => TRUE)));
+    $data['LocalID'] = array(openid_provider_url(openid_provider_user_path($account->uid)));
   }
   
   $xrds['openid_provider'] = array(
@@ -324,7 +339,7 @@ function openid_provider_pathauto_bulkupdate() {
   $placeholders = array();
   while ($user = db_fetch_object($result)) {
     $placeholders = pathauto_get_placeholders('user', $user);
-    $src = openid_provider_user_url($user->uid);
+    $src = openid_provider_user_path($user->uid);
     if ($alias = pathauto_create_alias('openid_provider', 'bulkupdate', $placeholders, $src, $user->uid)) {
       $count++;
     }

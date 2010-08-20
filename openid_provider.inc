@@ -95,11 +95,11 @@ function openid_provider_authentication_response($request) {
 
   // Check for a directed identity request.
   if ($request['openid.identity'] == 'http://specs.openid.net/auth/2.0/identifier_select') {
-    $identity = url(openid_provider_user_url($user->uid), array('absolute' => TRUE));
+    $identity = openid_provider_url(openid_provider_user_path($user->uid));
   }
   else {
     $identity = $request['openid.identity'];
-    if ($identity != url(openid_provider_user_url($user->uid), array('absolute' => TRUE))) {
+    if ($identity != openid_provider_url(openid_provider_user_path($user->uid))) {
       $response = openid_provider_authentication_error($request['openid.mode']);
       openid_redirect($request['openid.return_to'], $response);
     }
@@ -108,7 +108,7 @@ function openid_provider_authentication_response($request) {
   $response = array(
     'openid.ns' => OPENID_NS_2_0,
     'openid.mode' => 'id_res',
-    'openid.op_endpoint' => url('openid/provider', array('absolute' => TRUE)),
+    'openid.op_endpoint' => openid_provider_url('openid/provider'),
     'openid.identity' => $identity,
     'openid.claimed_id' => $identity,
     'openid.return_to' => $request['openid.return_to'],
