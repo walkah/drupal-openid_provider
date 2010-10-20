@@ -61,6 +61,9 @@ function openid_provider_association_response($request) {
 
   drupal_set_header('HTTP/1.1 200 OK');
   drupal_set_header("Content-Type: text/plain");
+  drupal_set_header('Content-Length: '. strlen($message));
+  drupal_set_header('Connection: close');
+
   print $message;
 }
 
