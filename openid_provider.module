@@ -64,7 +64,7 @@ function openid_provider_menu() {
  * Implementation of hook_perm().
  */
 function openid_provider_perm() {
-  return array('administer openid provider');
+  return array('manage own openid sites', 'administer openid provider');
 }
 
  /**
@@ -96,7 +96,7 @@ function openid_provider_init() {
  */
 function openid_provider_sites_access($account) {
   global $user;
-  return ($account->uid == $user->uid) || user_access('administer openid provider');
+  return (($account->uid == $user->uid) && user_access('manage own openid sites')) || user_access('administer openid provider');
 }
 
 /**
